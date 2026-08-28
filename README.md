@@ -15,12 +15,6 @@ to features it has no opinion about.
 The writer escapes text and attributes. A label containing `&` or `<` would
 otherwise produce a file the parser then refuses to read.
 
-## Two parsers, on purpose
-
-Reading uses a DOM, because the importer looks elements up by which attributes
-they carry rather than reading them in order. The DOM crate cannot write, hence
-the second XML dependency for output.
-
 ## License
 
 Public domain. See UNLICENSE.
