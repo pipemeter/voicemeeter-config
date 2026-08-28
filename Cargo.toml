@@ -1,0 +1,27 @@
+[package]
+name = "voicemeeter-config"
+version = "0.1.0"
+edition = "2024"
+authors = ["PipeMeeter Team <dev@pipemeeter.org>"]
+description = "Reading and writing Voicemeeter's XML settings dialect"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pipemeeter/voicemeeter-config"
+
+[lib]
+name = "voicemeeter_config"
+path = "src/lib.rs"
+
+[dependencies]
+roxmltree = "0.20"
+log = "0.4"
+quick-xml = "0.37"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+similar_names = "allow"
