@@ -1,13 +1,26 @@
 # voicemeeter-config
 
-Rust library for parsing and serializing Voicemeeter XML configuration profiles (`.xml`).
+Reads and writes Voicemeeter's XML settings files.
 
-## Features
+Covers strips, buses, the routing matrix, compressor and gate values, device
+assignments, labels, scene layers and the menu options.
 
-- **Document Parsing**: Reads Voicemeeter XML structure into strongly typed structs.
-- **Serialization**: Writes valid XML dialect compatible with hardware and virtual configurations.
-- **Repair Engine**: Automatically handles malformed or unescaped characters produced by native configs.
+## Round tripping
+
+A file read and written again keeps what it came in with. Elements this crate
+does not model are carried through untouched rather than dropped, so loading
+someone's settings and saving them does not quietly delete the parts belonging
+to features it has no opinion about.
+
+The writer escapes text and attributes. A label containing `&` or `<` would
+otherwise produce a file the parser then refuses to read.
+
+## Two parsers, on purpose
+
+Reading uses a DOM, because the importer looks elements up by which attributes
+they carry rather than reading them in order. The DOM crate cannot write, hence
+the second XML dependency for output.
 
 ## License
 
-Licensed under either of Apache License, Version 2.0 or MIT license at your option.
+Public domain. See UNLICENSE.
