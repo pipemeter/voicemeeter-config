@@ -87,9 +87,7 @@ impl Document {
                 text_element(writer, "PresetComment", &scene.comment)?;
                 text_element(writer, "PresetTimeStamp", &scene.timestamp)?;
                 body(writer, &scene.settings, &sections)?;
-                writer.write_event(Event::End(BytesEnd::new(
-                    "VBAudioVoicemeeterPresetScene",
-                )))?;
+                writer.write_event(Event::End(BytesEnd::new("VBAudioVoicemeeterPresetScene")))?;
                 Ok(())
             }
             Self::Pban(config) => pban(writer, config),
@@ -546,7 +544,10 @@ mod tests {
             for (i, (a, b)) in original.strips.iter().zip(&back.strips).enumerate() {
                 assert_eq!(a.buses, b.buses, "{name}: strip {i} routing");
                 assert_eq!(a.label, b.label, "{name}: strip {i} label");
-                assert!((a.gain_db - b.gain_db).abs() < 0.01, "{name}: strip {i} gain");
+                assert!(
+                    (a.gain_db - b.gain_db).abs() < 0.01,
+                    "{name}: strip {i} gain"
+                );
                 assert_eq!(a.panels, b.panels, "{name}: strip {i} panels");
             }
             for (i, (a, b)) in original.buses.iter().zip(&back.buses).enumerate() {
@@ -563,7 +564,10 @@ mod tests {
             assert_eq!(back.memories, original.memories, "{name}: memory contents");
             checked += 1;
         }
-        assert!(checked > 5, "expected several settings files, saw {checked}");
+        assert!(
+            checked > 5,
+            "expected several settings files, saw {checked}"
+        );
     }
 
     #[test]
@@ -605,7 +609,10 @@ mod tests {
         let text = Document::Settings(Box::new(original)).render();
         let back = parse(&text).expect("round trips");
 
-        for (i, (x, y)) in [(0.1, 0.2), (0.3, 0.4), (-0.5, -0.6)].into_iter().enumerate() {
+        for (i, (x, y)) in [(0.1, 0.2), (0.3, 0.4), (-0.5, -0.6)]
+            .into_iter()
+            .enumerate()
+        {
             assert!((back.strips[0].panels[i].0 - x).abs() < 0.01, "face {i} x");
             assert!((back.strips[0].panels[i].1 - y).abs() < 0.01, "face {i} y");
         }

@@ -186,4 +186,3 @@ mod round_trip {
         assert_eq!(after, super::Config::default());
     }
 }
-

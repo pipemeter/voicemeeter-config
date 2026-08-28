@@ -102,11 +102,7 @@ impl Button {
             colour: mode_index(flag_f32(node, "color")),
             shortcut: Shortcut {
                 key: mode_index(flag_f32(node, "key")),
-                modifiers: [
-                    flag(node, "ctrl"),
-                    flag(node, "shift"),
-                    flag(node, "alt"),
-                ],
+                modifiers: [flag(node, "ctrl"), flag(node, "shift"), flag(node, "alt")],
                 global: flag(node, "anyway"),
                 exclusive: flag(node, "exclusive"),
             },

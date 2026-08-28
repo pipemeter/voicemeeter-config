@@ -24,9 +24,12 @@ pub fn mode_index(raw: f32) -> u32 {
     // the clamp has already ruled out negatives and anything large.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let clamped = raw.round().clamp(0.0, f32::from(u16::MAX)) as u16;
-    if raw.is_finite() { u32::from(clamped) } else { 0 }
+    if raw.is_finite() {
+        u32::from(clamped)
+    } else {
+        0
+    }
 }
-
 
 /// Voicemeeter indexes from one; we index from zero.
 pub fn index_of(node: &roxmltree::Node<'_, '_>) -> Option<usize> {

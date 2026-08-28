@@ -7,12 +7,10 @@
 //! compressor, again for a parametric EQ cell, and only its attributes say
 //! which one it is.
 
-use crate::blocks::{
-    C5Band, Compressor, DeviceOptions, EqCell, Gate, Pitch,
-};
+use crate::blocks::{C5Band, Compressor, DeviceOptions, EqCell, Gate, Pitch};
 use crate::read::{flag, flag_f32, index_of, mode_index, suffix};
-use crate::{Bus, EQ_ON, Edition, Error, Imported, MONO, MUTE, SOLO, Strip};
 use crate::{BUS_ATTRS, BUS_EQ, BUS_MONO, BUS_MUTE, BUS_SEL};
+use crate::{Bus, EQ_ON, Edition, Error, Imported, MONO, MUTE, SOLO, Strip};
 
 /// Read the mixer out of a settings or scene document.
 pub(crate) fn read_settings(root: &roxmltree::Node<'_, '_>) -> Result<Imported, Error> {
@@ -78,8 +76,6 @@ pub(crate) fn read_settings_from(
     Ok(imported)
 }
 
-
-
 /// Read one element into the document. Returns whether it was recognised.
 ///
 /// Split out because it is a long flat dispatch and reads better on its own
@@ -95,30 +91,30 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
         // `*mem` elements beside them are the A/B compare memories.
         "Strip" if node.has_attribute("cell") => {
             imported.strip_eq.push(EqCell::read(node));
-                    }
+        }
         "Bus" if node.has_attribute("cell") => {
             imported.bus_eq.push(EqCell::read(node));
-                    }
+        }
         "Strip" if node.has_attribute("ColorPanelx") || node.has_attribute("Panel3Dx") => {
             if let Some(slot) = index_of(node).and_then(|i| imported.strips.get_mut(i)) {
                 read_panel(node, slot);
-                            }
+            }
         }
         "Strip" if node.has_attribute("busa") => {
             if let Some(slot) = index_of(node).and_then(|i| imported.strips.get_mut(i)) {
                 read_strip(node, slot);
-                            }
+            }
         }
         // Likewise the bus element carrying BusMode, not the EQ cells.
         "Bus" if node.has_attribute("BusMode") => {
             if let Some(slot) = index_of(node).and_then(|i| imported.buses.get_mut(i)) {
                 read_bus(node, slot);
-                            }
+            }
         }
         // The compressor, gate and pitch blocks share the Strip index
         // but not its attributes, which is how they are told apart.
         "StripComp" => {
-                        if let Some(slot) = index_of(node).and_then(|i| imported.compressors.get_mut(i)) {
+            if let Some(slot) = index_of(node).and_then(|i| imported.compressors.get_mut(i)) {
                 *slot = Compressor::read(node);
             }
         }
@@ -146,10 +142,10 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
         "OptionDev" => imported.device_options = DeviceOptions::read(node),
         "InputDev" => {
             read_device(node, &mut imported.input_devices);
-                    }
+        }
         "OutputDev" => {
             read_device(node, &mut imported.output_devices);
-                    }
+        }
         "Edition" => imported.extras.edition = text_of(node),
         "InternalFx2" => imported.extras.internal_fx2 = text_of(node),
         "InternalFxState1" => imported.extras.internal_fx_state[0] = text_of(node),
@@ -334,5 +330,3 @@ fn set_bus_label(into: &mut Imported, index: usize, text: &str) -> bool {
     }
     false
 }
-
-

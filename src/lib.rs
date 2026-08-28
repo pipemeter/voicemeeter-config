@@ -23,10 +23,10 @@ use std::fmt;
 pub mod blocks;
 pub mod macros;
 pub mod midi;
-mod read;
-mod settings;
-pub mod scene;
 pub mod pban;
+mod read;
+pub mod scene;
+mod settings;
 mod write;
 
 use blocks::{C5, Compressor, Delay, DeviceOptions, EqCell, ExternalPatch, Gate, Pitch, Reverb};
@@ -76,9 +76,7 @@ impl Document {
             }
             "VBAudioVoicemeeterVBANConfig" => Self::Pban(pban::Config::read(&root)),
             "VBAudioVoicemeeterMIDIMapping" => Self::Midi(midi::Map::read(&root)),
-            "VBAudioVoicemeeterMacroButtonMap" => {
-                Self::MacroButtons(macros::Buttons::read(&root))
-            }
+            "VBAudioVoicemeeterMacroButtonMap" => Self::MacroButtons(macros::Buttons::read(&root)),
             "VBAudioVoicemeeterPresetScene" => Self::Scene(Box::new(scene::Scene::read(&root)?)),
             "VBAudioVoicemeeterPresetPitch" => {
                 Self::PitchPreset(Box::new(scene::PitchPreset::read(&root)))
@@ -486,9 +484,7 @@ fn opening_tag(trimmed: &str) -> Option<&str> {
 }
 
 fn closing_tag(trimmed: &str) -> Option<&str> {
-    trimmed
-        .strip_prefix("</")
-        .map(element_name)
+    trimmed.strip_prefix("</").map(element_name)
 }
 
 /// The name at the start of a tag body, up to the first space or bracket.
@@ -852,7 +848,12 @@ mod tests {
         );
         assert!(parsed.compressors.iter().any(|c| c.ratio > 1.0));
         assert!(parsed.gates.iter().any(|g| g.hold > 0.0));
-        assert!(parsed.strips.iter().any(|s| s.layers.iter().any(|l| *l != 0.0)));
+        assert!(
+            parsed
+                .strips
+                .iter()
+                .any(|s| s.layers.iter().any(|l| *l != 0.0))
+        );
     }
 
     #[test]
