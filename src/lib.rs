@@ -138,6 +138,14 @@ pub struct SeenDevice {
     pub description: String,
     /// `"in"` or `"out"`.
     pub direction: String,
+    /// When it was last in the graph: seconds since the Unix epoch, UTC.
+    /// Empty for a list written before this was recorded.
+    pub last_seen: String,
+    /// `"physical"` or `"virtual"`.
+    ///
+    /// Stored because it cannot be recovered later: a device that is not
+    /// plugged in is not in the graph to be asked what it is.
+    pub kind: String,
 }
 
 /// Whose settings file this is.
@@ -632,6 +640,8 @@ mod tests {
                 name: "bluez.headset".to_owned(),
                 description: "WH-1000XM4".to_owned(),
                 direction: "out".to_owned(),
+                kind: "physical".to_owned(),
+                last_seen: "1700000000".to_owned(),
             }],
             ..Imported::default()
         };
@@ -648,6 +658,8 @@ mod tests {
         assert_eq!(back.seen_devices.len(), 1);
         assert_eq!(back.seen_devices[0].description, "WH-1000XM4");
         assert_eq!(back.seen_devices[0].direction, "out");
+        assert_eq!(back.seen_devices[0].kind, "physical");
+        assert_eq!(back.seen_devices[0].last_seen, "1700000000");
     }
 
     /// The wrapper sections follow the dialect, right through the family:

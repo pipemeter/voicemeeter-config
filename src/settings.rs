@@ -77,6 +77,8 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
                 name: node.attribute("name").unwrap_or_default().to_owned(),
                 description: node.attribute("description").unwrap_or_default().to_owned(),
                 direction: node.attribute("direction").unwrap_or("out").to_owned(),
+                kind: node.attribute("kind").unwrap_or("virtual").to_owned(),
+                last_seen: node.attribute("lastseen").unwrap_or_default().to_owned(),
             });
         }
         "Strip" if node.has_attribute("cell") => {

@@ -200,6 +200,10 @@ fn seen_devices(writer: &mut Writer<Vec<u8>>, imported: &Imported) -> std::io::R
         element.push_attribute(("direction", device.direction.as_str()));
         element.push_attribute(("name", device.name.as_str()));
         element.push_attribute(("description", device.description.as_str()));
+        element.push_attribute(("kind", device.kind.as_str()));
+        if !device.last_seen.is_empty() {
+            element.push_attribute(("lastseen", device.last_seen.as_str()));
+        }
         writer.write_event(Event::Empty(element))?;
     }
     writer.write_event(Event::End(BytesEnd::new(crate::SEEN_DEVICES)))?;
