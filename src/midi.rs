@@ -71,7 +71,6 @@ impl Item {
     fn read(node: &roxmltree::Node<'_, '_>) -> Self {
         let mut bytes = [0u8; 6];
         for (i, slot) in bytes.iter_mut().enumerate() {
-            // Hex, and two digits wide, which is why this is not flag_f32.
             *slot = node
                 .attribute(format!("b{}", i + 1).as_str())
                 .and_then(|text| u8::from_str_radix(text.trim(), 16).ok())
@@ -129,7 +128,6 @@ mod tests {
         assert_eq!(map.items.len(), 2);
 
         let fader = map.get("InGainFader1").expect("the fader is mapped");
-        // B0 is 176, not 0 as a decimal read would give.
         assert_eq!(fader.bytes[0], 0xB0);
         assert_eq!(fader.bytes[1], 0x07);
         assert!(fader.flags[super::ENCODER]);
@@ -146,7 +144,6 @@ mod tests {
         assert!(mute.flags[super::OMNI]);
         assert!(mute.flags[super::DISABLED]);
         assert!(!mute.flags[super::ENCODER]);
-        // And the other item is not affected by them.
         assert!(!map.get("InGainFader1").unwrap().flags[super::DISABLED]);
     }
 

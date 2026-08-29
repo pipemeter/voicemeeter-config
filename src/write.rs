@@ -38,7 +38,7 @@ impl Sections {
                 devices: "VoiceMeeterDeviceConfiguration",
                 parameters: "VoiceMeeterParameters",
             },
-            crate::Dialect::PipeMeeter => Self {
+            crate::Dialect::PipeMeter => Self {
                 root: crate::ROOT_PIPEMETER,
                 devices: "PipemeterDeviceConfiguration",
                 parameters: "PipemeterParameters",
@@ -52,8 +52,6 @@ impl Document {
     #[must_use]
     pub fn render(&self) -> String {
         let mut writer = Writer::new_with_indent(Vec::new(), b'\t', 1);
-        // Writing to a Vec cannot fail, so the errors below are unreachable
-        // rather than ignored.
         let _ = self.build(&mut writer);
         String::from_utf8(writer.into_inner()).unwrap_or_default()
     }
@@ -91,9 +89,6 @@ impl Document {
                 Ok(())
             }
             Self::Vban(config) => vban(writer, config),
-            // The remaining kinds are read-only: nothing in this program edits
-            // a MIDI map or a button script, and a writer for something
-            // nothing changes is a place for bugs to hide.
             Self::Midi(_) | Self::MacroButtons(_) | Self::PitchPreset(_) => Ok(()),
         }
     }
@@ -119,8 +114,6 @@ fn vban(writer: &mut Writer<Vec<u8>>, config: &crate::vban::Config) -> std::io::
     header.push_attribute(("color", config.colour.as_str()));
     writer.write_event(Event::Empty(header))?;
 
-    // The channel attribute is the one thing that differs between the two
-    // directions, and it is what says where a stream lands or comes from.
     for (tag, channel_attr, streams) in [
         ("VBANStreamIn", "in", &config.incoming),
         ("VBANStreamOut", "out", &config.outgoing),
@@ -243,8 +236,6 @@ fn extras(writer: &mut Writer<Vec<u8>>, imported: &Imported) -> std::io::Result<
 }
 
 fn labels(writer: &mut Writer<Vec<u8>>, imported: &Imported) -> std::io::Result<()> {
-    // Five hardware strips then three virtual, matching the LabelStrip and
-    // LabelVirtualStrip split the original uses.
     for (i, strip) in imported.strips.iter().enumerate() {
         let tag = if i < 5 {
             format!("LabelStrip{}", i + 1)
@@ -278,8 +269,6 @@ fn strip_row(writer: &mut Writer<Vec<u8>>, i: usize, strip: &Strip) -> std::io::
     for (attr, value) in ["prg_c", "prg_g", "prg_d"].into_iter().zip(strip.programs) {
         e.push_attribute((attr, value.to_string().as_str()));
     }
-    // The routing matrix: the attribute that tells this element apart from
-    // the compressor and EQ elements sharing its tag.
     for (attr, on) in BUS_ATTRS.into_iter().zip(strip.buses) {
         e.push_attribute((attr, bit(on)));
     }
@@ -312,9 +301,6 @@ fn panel_row(writer: &mut Writer<Vec<u8>>, i: usize, strip: &Strip) -> std::io::
         e.push_attribute((x, format!("{px:.3}").as_str()));
         e.push_attribute((y, format!("{py:.3}").as_str()));
     }
-    // Ours, not Voicemeeter's. It ignores attributes it does not know, so
-    // writing it here costs a file it can still read and saves the user
-    // setting every pad back to the first face on every launch.
     e.push_attribute(("PanelFace", strip.panel_face.to_string().as_str()));
     writer.write_event(Event::Empty(e))
 }
@@ -326,8 +312,6 @@ fn bus_row(writer: &mut Writer<Vec<u8>>, i: usize, bus: &Bus) -> std::io::Result
     e.push_attribute(("vaio", bit(bus.virtual_out)));
     e.push_attribute(("mono", bit(bus.toggles[BUS_MONO])));
     e.push_attribute(("cross", bit(bus.cross)));
-    // BusMode is what marks this as the bus parameter element rather than an
-    // EQ cell, so the reader can tell them apart.
     e.push_attribute(("BusMode", bus.mode.to_string().as_str()));
     e.push_attribute(("EQon", bit(bus.toggles[BUS_EQ])));
     e.push_attribute(("SEL", bit(bus.toggles[BUS_SEL])));
@@ -436,17 +420,12 @@ fn device(
 ) -> std::io::Result<()> {
     let mut e = BytesStart::new(tag);
     e.push_attribute(("index", (index + 1).to_string().as_str()));
-    // A dash is how the original writes an empty slot, and how its reader
-    // recognises one.
     e.push_attribute(("name", name.unwrap_or("-")));
     writer.write_event(Event::Empty(e))
 }
 
 fn text_element(writer: &mut Writer<Vec<u8>>, tag: &str, text: &str) -> std::io::Result<()> {
     if text.is_empty() {
-        // Self-closing rather than an open and close pair: the indenting
-        // writer would otherwise put a newline between them, and the label
-        // would read back as whitespace instead of as nothing.
         return writer.write_event(Event::Empty(BytesStart::new(tag)));
     }
     writer.write_event(Event::Start(BytesStart::new(tag)))?;
@@ -561,8 +540,6 @@ mod tests {
                 assert_eq!(a.mode, b.mode, "{name}: bus {i} mode");
                 assert_eq!(a.toggles, b.toggles, "{name}: bus {i} toggles");
             }
-            // The A/B memories are the easiest thing to lose, being the part
-            // nothing reads: a real Potato file carries thirty-eight.
             assert_eq!(
                 back.memories.len(),
                 original.memories.len(),
@@ -610,7 +587,6 @@ mod tests {
 
     #[test]
     fn all_three_panel_faces_survive() {
-        // The bug this replaced: one face was written, the other two lost.
         let mut original = sample();
         original.strips[0].panels = [(0.1, 0.2), (0.3, 0.4), (-0.5, -0.6)];
         let text = Document::Settings(Box::new(original)).render();
@@ -628,8 +604,6 @@ mod tests {
     #[test]
     fn a_device_name_with_an_ampersand_is_escaped_not_repaired() {
         let text = Document::Settings(Box::new(sample())).render();
-        // Escaped on the way out, which is what makes it valid XML rather
-        // than something our own reader has to patch up.
         assert!(text.contains("a &amp; b"));
         assert_eq!(
             parse(&text).expect("parses").input_devices[0].as_deref(),
@@ -640,7 +614,7 @@ mod tests {
     #[test]
     fn our_dialect_and_theirs_differ_only_in_their_wrappers() {
         let mut ours = sample();
-        ours.dialect = Dialect::PipeMeeter;
+        ours.dialect = Dialect::PipeMeter;
         let ours_text = Document::Settings(Box::new(ours)).render();
         assert!(ours_text.contains("<PipemeterSettings>"));
         assert!(ours_text.contains("<PipemeterParameters>"));
@@ -648,7 +622,6 @@ mod tests {
         let theirs_text = Document::Settings(Box::new(sample())).render();
         assert!(theirs_text.contains("<VBAudioVoicemeeterSettings>"));
 
-        // Same content either way: only the wrappers move.
         let strip_of = |text: &str| {
             text.lines()
                 .find(|l| l.contains("<Strip index=\"1\"") && l.contains("busa"))
@@ -669,8 +642,6 @@ mod tests {
             back.extras.internal_fx_state[0],
             "HALL,0.3500,0.7200,0.2000,0.8500"
         );
-        // The arming set is eight flags, and which eight matters: a row
-        // that came back shifted would arm the wrong strips.
         assert_eq!(
             back.extras.external_returns[1],
             "0.0000,0.7500,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000"
@@ -679,8 +650,6 @@ mod tests {
             back.extras.armed_inputs,
             [false, false, true, false, false, false, false, true]
         );
-        // They are ordinary elements, so a reader that does not know them
-        // walks past rather than failing.
         assert!(text.contains("<Edition>"));
     }
 }

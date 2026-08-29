@@ -68,8 +68,6 @@ impl Stream {
             enabled: flag(node, "status"),
             name: attr(node, "name"),
             address: attr(node, "ip"),
-            // Ports above 65535 cannot be real, so a bad one reads as the
-            // VBAN default rather than as a wrapped number.
             port: u16::try_from(mode_index(flag_f32(node, "port"))).unwrap_or(6980),
             channel: mode_index(flag_f32(node, channel_attr)),
             quality: mode_index(flag_f32(node, "NQ")),
@@ -109,7 +107,6 @@ mod tests {
         assert_eq!(first.name, "blu-pc");
         assert_eq!(first.address, "192.168.2.51");
         assert_eq!(first.port, 6980);
-        // status='0' means the stream is configured but not running.
         assert!(!first.enabled);
         assert!(config.incoming[1].enabled);
     }
@@ -156,8 +153,6 @@ mod round_trip {
 
     #[test]
     fn a_written_configuration_reads_back_the_same() {
-        // The window edits this and nothing else writes it, so a lossy
-        // writer would quietly drop the user's network setup on save.
         let before = sample();
         let xml = Document::Vban(before.clone()).render();
         let Document::Vban(after) = Document::parse(&xml).expect("parses") else {
@@ -168,8 +163,6 @@ mod round_trip {
 
     #[test]
     fn the_two_directions_keep_their_own_channel_attribute() {
-        // `in` and `out` are the only thing that differs between the tags,
-        // and swapping them would silently move every stream.
         let xml = Document::Vban(sample()).render();
         assert!(xml.contains("<VBANStreamIn"), "{xml}");
         assert!(xml.contains("<VBANStreamOut"), "{xml}");

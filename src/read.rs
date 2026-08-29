@@ -20,8 +20,6 @@ pub fn flag_f32(node: &roxmltree::Node<'_, '_>, attr: &str) -> f32 {
 /// Saturating rather than wrapping: a corrupt file should land on the first
 /// mode, not on whatever a wrapped cast happens to select.
 pub fn mode_index(raw: f32) -> u32 {
-    // Through u16 so the cast is provably in range and cannot lose a sign:
-    // the clamp has already ruled out negatives and anything large.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let clamped = raw.round().clamp(0.0, f32::from(u16::MAX)) as u16;
     if raw.is_finite() {

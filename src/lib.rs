@@ -64,11 +64,6 @@ impl Document {
         let doc = roxmltree::Document::parse(&xml).map_err(Error::Xml)?;
         let root = doc.root_element();
         Ok(match root.tag_name().name() {
-            // PipeMeeter's own dialect *is* this one, with a different root
-            // and a few extra elements of its own. Reading them through the
-            // same path is the whole point of inheriting the format rather
-            // than inventing one: a PipeMeeter file loads in Voicemeeter's
-            // shape, and a Voicemeeter file loads here.
             "VBAudioVoicemeeterSettings" | ROOT_PIPEMETER => {
                 let mut imported = settings::read_settings_from(&root, Some(&xml))?;
                 imported.dialect = Dialect::of(root.tag_name().name());
@@ -121,14 +116,14 @@ impl Document {
     }
 }
 
-/// The root element `PipeMeeter` writes.
+/// The root element `PipeMeter` writes.
 pub const ROOT_PIPEMETER: &str = "PipemeterSettings";
 /// The root element Voicemeeter writes.
 pub const ROOT_VOICEMEETER: &str = "VBAudioVoicemeeterSettings";
 
 /// Whose settings file this is.
 ///
-/// The two are the same format: `PipeMeeter`'s is Voicemeeter's with a
+/// The two are the same format: `PipeMeter`'s is Voicemeeter's with a
 /// different root and a handful of extra elements. Knowing which one came in
 /// matters only for what goes back out, and for telling the user what they
 /// just opened.
@@ -136,14 +131,14 @@ pub const ROOT_VOICEMEETER: &str = "VBAudioVoicemeeterSettings";
 pub enum Dialect {
     #[default]
     Voicemeeter,
-    PipeMeeter,
+    PipeMeter,
 }
 
 impl Dialect {
     #[must_use]
     fn of(root: &str) -> Self {
         if root == ROOT_PIPEMETER {
-            Self::PipeMeeter
+            Self::PipeMeter
         } else {
             Self::Voicemeeter
         }
@@ -154,7 +149,7 @@ impl Dialect {
     pub fn root(self) -> &'static str {
         match self {
             Self::Voicemeeter => ROOT_VOICEMEETER,
-            Self::PipeMeeter => ROOT_PIPEMETER,
+            Self::PipeMeter => ROOT_PIPEMETER,
         }
     }
 }
@@ -231,7 +226,7 @@ pub struct Imported {
     pub device_options: DeviceOptions,
     /// Which edition wrote the file, inferred from how much of it there is.
     pub edition: Edition,
-    /// Whether this came from Voicemeeter or from `PipeMeeter`.
+    /// Whether this came from Voicemeeter or from `PipeMeter`.
     pub dialect: Dialect,
     /// The elements only our own dialect carries.
     pub extras: Extras,
@@ -247,7 +242,7 @@ pub struct Imported {
     pub memories: Vec<String>,
 }
 
-/// Settings that are `PipeMeeter`'s alone.
+/// Settings that are `PipeMeter`'s alone.
 ///
 /// Kept in the same struct as everything else rather than beside it: our
 /// dialect is Voicemeeter's plus these, and separating them would mean two
@@ -432,14 +427,10 @@ fn repair(xml: &str) -> std::borrow::Cow<'_, str> {
 
         if let Some(name) = name {
             if previous_open == Some(trimmed) {
-                // The same tag twice in a row: the second is a stray, and
-                // dropping it is what balances the document.
                 repaired = true;
                 continue;
             }
             if stack.last() == Some(&name) {
-                // The same tag again further down, where its close was due:
-                // the typo is a missing slash, so write the close instead.
                 repaired = true;
                 stack.pop();
                 out.push_str("</");
@@ -517,7 +508,6 @@ fn escape_bare_ampersands(xml: &str) -> String {
         out.push_str(&rest[..at]);
         let tail = &rest[at..];
         if is_entity(tail) {
-            // Already an entity; copy the ampersand and carry on.
             out.push('&');
         } else {
             out.push_str("&amp;");
@@ -543,7 +533,6 @@ fn is_entity(tail: &str) -> bool {
     if let Some(digits) = body.strip_prefix('#') {
         return !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit());
     }
-    // A named entity: letters and digits, starting with a letter.
     body.starts_with(|c: char| c.is_ascii_alphabetic())
         && body.chars().all(|c| c.is_ascii_alphanumeric())
 }
@@ -606,8 +595,6 @@ mod tests {
     fn reads_routing_from_the_right_duplicate_element() {
         let out = parse(SAMPLE).expect("parses");
         let strip = &out.strips[0];
-        // busa4, busb and busb2 are set; the compressor and 3D-panel elements
-        // sharing index 1 must not have overwritten any of this.
         assert_eq!(
             strip.buses,
             [false, false, false, true, false, true, true, false]
@@ -629,10 +616,8 @@ mod tests {
     fn labels_land_in_the_right_slots() {
         let out = parse(SAMPLE).expect("parses");
         assert_eq!(out.strips[0].label, "Mic IN");
-        // An empty label element leaves the default rather than blanking it.
         assert_eq!(out.strips[1].label, "");
         assert_eq!(out.buses[1].label, "Headphones");
-        // LabelVirtualBus1 is B1, which is bus index 5.
         assert_eq!(out.buses[5].label, "Mic IN");
     }
 
@@ -664,7 +649,6 @@ mod tests {
         assert!(strip.flags[super::EQ_ON]);
         assert!((strip.eq_gain[0] - -12.0).abs() < 0.001);
         assert!((strip.eq_gain[1] - 3.5).abs() < 0.001);
-        // Reverb, Delay, FX1, FX2 and their Post flags.
         assert!((strip.sends[0] - 1.5).abs() < 0.001);
         assert!((strip.sends[2] - 2.5).abs() < 0.001);
         assert_eq!(strip.post, [true, false, false, true]);
@@ -673,12 +657,9 @@ mod tests {
     #[test]
     fn the_panel_handle_comes_from_its_own_element() {
         let out = parse(SAMPLE).expect("parses");
-        // ColorPanelx/y sit on a different <Strip index='1'> than the routing
-        // attributes; both must land on the same strip.
         let colour = out.strips[0].panels[PANEL_COLOUR];
         assert!((colour.0 - -0.178).abs() < 0.001);
         assert!((colour.1 - 0.250).abs() < 0.001);
-        // And that element must not have wiped the routing.
         assert_eq!(
             out.strips[0].buses,
             [false, false, false, true, false, true, true, false]
@@ -703,8 +684,6 @@ mod tests {
 
     #[test]
     fn the_edition_comes_from_the_highest_slot_addressed() {
-        // A Potato file where only the last strip carries anything is still
-        // a Potato file; counting what is *set* would call it Standard.
         let sparse = format!(
             "<{ROOT_VOICEMEETER}><VoiceMeeterParameters>\
              <Strip index='8' busa='1' dblevel='0.0' /></VoiceMeeterParameters>\
@@ -731,8 +710,6 @@ mod tests {
     #[test]
     fn unrelated_xml_is_rejected_by_its_root() {
         let err = parse("<html><body>not a mixer</body></html>").unwrap_err();
-        // Named rather than generic: "root element <html>" tells the user
-        // what they actually picked, which "not Voicemeeter" does not.
         assert!(matches!(err, Error::UnknownDocument(root) if root == "html"));
     }
 
@@ -740,22 +717,19 @@ mod tests {
     fn a_recognised_document_of_the_wrong_kind_says_so() {
         let vban = "<VBAudioVoicemeeterVBANConfig><VBANConfiguration/>\
                     </VBAudioVoicemeeterVBANConfig>";
-        // Asking for mixer settings and getting a VBAN file is a different
-        // mistake from handing over a photograph, and reads differently.
         let err = parse(vban).unwrap_err();
         assert!(matches!(err, Error::WrongDocument(_)));
-        // The message names the kind in our own words, not the file's tag.
         assert!(err.to_string().contains("VBAN"));
     }
 
     #[test]
-    fn a_pipemeeter_file_is_read_as_the_same_format() {
+    fn a_pipemeter_file_is_read_as_the_same_format() {
         let ours = format!(
             "<{ROOT_PIPEMETER}><PipemeterParameters>\
              <Strip index='1' busa='1' dblevel='1.0' /></PipemeterParameters></{ROOT_PIPEMETER}>"
         );
         let parsed = parse(&ours).expect("our own dialect is the same format");
-        assert_eq!(parsed.dialect, Dialect::PipeMeeter);
+        assert_eq!(parsed.dialect, Dialect::PipeMeter);
         assert!(parsed.strips[0].buses[0]);
 
         let theirs = ours.replace(ROOT_PIPEMETER, ROOT_VOICEMEETER);
@@ -773,7 +747,6 @@ mod tests {
     fn every_reference_document_is_recognised() {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../.references/configs");
         let Ok(entries) = std::fs::read_dir(root) else {
-            // The reference dumps are deliberately not in the repository.
             return;
         };
 
@@ -786,8 +759,6 @@ mod tests {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir() {
-                    // Skip the documentation tree: it holds help files in a
-                    // different format entirely.
                     if path.file_name().is_some_and(|n| n == "docs") {
                         continue;
                     }
@@ -819,29 +790,19 @@ mod tests {
             "/../../.references/configs/windows/voicemeeter.xml"
         );
         let Ok(text) = std::fs::read_to_string(path) else {
-            // The reference dumps are deliberately not in the repository.
             return;
         };
         let parsed = parse(&text).expect("a real file should parse");
 
         assert_eq!(parsed.strips.len(), 8);
         assert_eq!(parsed.buses.len(), 8);
-        // The file carries one block per strip and hundreds of EQ cells; the
-        // point of the assertion is that they were found at all.
         assert!(parsed.strip_eq.len() > 100, "strip EQ cells were dropped");
         assert!(parsed.bus_eq.len() > 100, "bus EQ cells were dropped");
-        // Five live bands. The file holds fifteen in total; the other ten
-        // are the A/B compare memories and must not be counted.
         assert_eq!(parsed.c5.band.len(), 5);
         assert!(!parsed.reverb.preset_name.is_empty());
         assert!(parsed.device_options.mme > 0);
-        // A real Potato file carries thirty-eight A/B compare memories:
-        // sixteen strip EQ banks, sixteen bus EQ banks, and two each for the
-        // reverb, the delay and the five-band compressor.
         assert_eq!(parsed.memories.len(), 38, "A/B memories were not captured");
 
-        // Print the shape of what came out, so a run of the tests says
-        // plainly how much of a real file is now understood.
         println!(
             "strip EQ cells {}, bus EQ cells {}, C5 bands {}, reverb preset {:?}",
             parsed.strip_eq.len(),
@@ -861,7 +822,6 @@ mod tests {
 
     #[test]
     fn the_duplicated_parameters_tag_is_repaired() {
-        // Exactly what a real file does: opened twice, closed once.
         let doubled = SAMPLE.replace(
             "<VoiceMeeterParameters>",
             "<VoiceMeeterParameters>\n<VoiceMeeterParameters>",
@@ -872,8 +832,6 @@ mod tests {
 
     #[test]
     fn genuine_nesting_is_left_alone() {
-        // Two different tags in a row must not be mistaken for a duplicate
-        // by the repair pass.
         let nested = format!(
             "<{ROOT_VOICEMEETER}>\n<b>\n<Strip index='1' busa='1' dblevel='1.0' />\n</b>\n\
              </{ROOT_VOICEMEETER}>"
@@ -884,7 +842,6 @@ mod tests {
 
     #[test]
     fn an_unescaped_ampersand_in_a_device_name_is_repaired() {
-        // Voicemeeter really does write this; the file is not valid XML.
         let xml = format!(
             "<{ROOT_VOICEMEETER}><VoiceMeeterDeviceConfiguration>\
              <InputDev index='1' name=\"Digital Audio Interface (Y&H Game Live)\" />\
@@ -908,7 +865,6 @@ mod tests {
              <Strip index='1' busa='1' dblevel='0.0' /></VoiceMeeterParameters>\
              </{ROOT_VOICEMEETER}>"
         );
-        // Double-escaping would turn "a & b A c" into "a &amp; b &#65; c".
         assert_eq!(
             parse(&xml).expect("parses").input_devices[0].as_deref(),
             Some("a & b A c")

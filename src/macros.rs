@@ -110,7 +110,6 @@ impl Button {
         };
         button.trigger.enabled = flag(node, "trigger");
 
-        // The rest are child elements rather than attributes.
         for child in node.children() {
             let text = child.text().unwrap_or_default().to_owned();
             match child.tag_name().name() {
@@ -186,7 +185,6 @@ mod tests {
             panic!("should have been recognised as a button map");
         };
         assert_eq!(map.window.x, 10);
-        // Negative window coordinates are ordinary on a multi-monitor desk.
         assert_eq!(map.window.y, -20);
         assert_eq!(map.buttons.len(), 2);
 

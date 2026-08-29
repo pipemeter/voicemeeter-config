@@ -33,19 +33,12 @@ pub(crate) fn read_settings_from(
         pitches: vec![Pitch::default(); 8],
         ..Imported::default()
     };
-    // Anything we understood at all counts. A partial file - one Strip
-    // carrying only its EQ, which is what a saved panel preset looks like -
-    // is a real document and must not be refused for lacking routing rows.
     let mut found_anything = false;
-    // The highest one-based index any element mentions, which is what says
-    // which edition wrote the file.
     let mut highest_strip = 0;
     let mut highest_bus = 0;
 
     for node in root.descendants() {
         let tag = node.tag_name().name();
-        // A memory section is copied whole and then skipped, along with
-        // everything inside it.
         if tag.ends_with("Mem") && !in_memory(&node) {
             if let Some(text) = source.and_then(|text| slice_of(text, &node)) {
                 imported.memories.push(text);
@@ -69,9 +62,6 @@ pub(crate) fn read_settings_from(
     if !found_anything {
         return Err(Error::NotVoicemeeter);
     }
-    // The edition is not written anywhere; the highest slot the file
-    // addresses is the statement. Counting slots that *carry* something
-    // instead would call a Potato file with one strip set up a Standard one.
     imported.edition = Edition::of(highest_strip, highest_bus);
     Ok(imported)
 }
@@ -82,13 +72,6 @@ pub(crate) fn read_settings_from(
 /// than nested three deep inside the walk.
 fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -> bool {
     match tag {
-        // The routing element is the one carrying bus assignments; the
-        // compressor and gate elements share its tag and index.
-        // The panel coordinates live on a different <Strip> element from
-        // the routing one, so they get their own arm.
-        // EQ cells share the Strip and Bus tags too, and are told apart
-        // by carrying a cell number. Only the live ones are taken: the
-        // `*mem` elements beside them are the A/B compare memories.
         "Strip" if node.has_attribute("cell") => {
             imported.strip_eq.push(EqCell::read(node));
         }
@@ -105,14 +88,11 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
                 read_strip(node, slot);
             }
         }
-        // Likewise the bus element carrying BusMode, not the EQ cells.
         "Bus" if node.has_attribute("BusMode") => {
             if let Some(slot) = index_of(node).and_then(|i| imported.buses.get_mut(i)) {
                 read_bus(node, slot);
             }
         }
-        // The compressor, gate and pitch blocks share the Strip index
-        // but not its attributes, which is how they are told apart.
         "StripComp" => {
             if let Some(slot) = index_of(node).and_then(|i| imported.compressors.get_mut(i)) {
                 *slot = Compressor::read(node);
@@ -128,9 +108,6 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
                 *slot = Pitch::read(node);
             }
         }
-        // The effects appear once live and again inside the A/B memory
-        // sections, where the later copies are blank. Taking the last
-        // one seen would wipe the preset name off the panel.
         "ReverbGeneral" if !in_memory(node) => imported.reverb.read_general(node),
         "ReverbParam" if !in_memory(node) => imported.reverb.read_param(node),
         "MultiTapGeneral" if !in_memory(node) => imported.delay.read_general(node),
@@ -154,8 +131,6 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
         "ArmedInputs" => read_options(node, &mut imported.extras.armed_inputs),
         "ExternalReturns1" => imported.extras.external_returns[0] = text_of(node),
         "ExternalReturns2" => imported.extras.external_returns[1] = text_of(node),
-        // A label is the only arm that may not match anything, so it is the
-        // one that decides whether this element counted.
         other => return read_label(other, node, imported),
     }
     true
@@ -181,8 +156,6 @@ fn read_strip(node: &roxmltree::Node<'_, '_>, strip: &mut Strip) {
         strip.programs[i] = mode_index(flag_f32(node, attr));
     }
     strip.limit_db = flag_f32(node, "dblimit");
-    // Layers are one-based in the file and carry the fader level the strip
-    // takes when that scene is recalled.
     for (i, slot) in strip.layers.iter_mut().enumerate() {
         *slot = flag_f32(node, &format!("layer{}", i + 1));
     }
@@ -210,10 +183,6 @@ fn read_strip(node: &roxmltree::Node<'_, '_>, strip: &mut Strip) {
 /// coordinate pair, so this is read from the element that has them rather
 /// than from the routing one.
 fn read_panel(node: &roxmltree::Node<'_, '_>, strip: &mut Strip) {
-    // Each face writes its own pair, and an element may carry more than one,
-    // so every pair present is taken rather than the first.
-    // Ours, and only in our own files. Clamped rather than trusted: an index
-    // past the end would panic every draw.
     if node.has_attribute("PanelFace") {
         strip.panel_face = (mode_index(flag_f32(node, "PanelFace")) as usize).min(2);
     }
@@ -252,8 +221,6 @@ fn read_options<const N: usize>(node: &roxmltree::Node<'_, '_>, into: &mut [bool
 
 fn read_bus(node: &roxmltree::Node<'_, '_>, bus: &mut Bus) {
     bus.gain_db = flag_f32(node, "dblevel");
-    // Kept as the file's own number; the mixer turns it into a mode. A
-    // negative or absurd value falls back to zero rather than wrapping.
     bus.mode = mode_index(flag_f32(node, "BusMode"));
     bus.virtual_out = flag(node, "vaio");
     bus.cross = flag(node, "cross");
@@ -278,9 +245,6 @@ fn slice_of(source: &str, node: &roxmltree::Node<'_, '_>) -> Option<String> {
 }
 
 fn in_memory(node: &roxmltree::Node<'_, '_>) -> bool {
-    // Skipping self matters: roxmltree counts a node among its own
-    // ancestors, so without this a memory section is "inside a memory
-    // section" and the capture below skips the very thing it is for.
     node.ancestors()
         .skip(1)
         .any(|a| a.tag_name().name().ends_with("Mem"))
@@ -304,8 +268,6 @@ fn read_label(tag: &str, node: &roxmltree::Node<'_, '_>, into: &mut Imported) ->
         return false;
     };
 
-    // Hardware strips occupy 0-4 and virtual strips 5-7; the same split
-    // applies to the A and B buses.
     let target = if let Some(n) = suffix(tag, "LabelVirtualStrip") {
         into.strips.get_mut(4 + n)
     } else if let Some(n) = suffix(tag, "LabelStrip") {
