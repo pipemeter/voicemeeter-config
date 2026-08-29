@@ -129,6 +129,7 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
         "InternalFxState2" => imported.extras.internal_fx_state[1] = text_of(node),
         "MenuOptions" => read_options(node, &mut imported.extras.options),
         "ArmedInputs" => read_options(node, &mut imported.extras.armed_inputs),
+        "StartupSettings" => imported.extras.startup_settings = text_of(node),
         "ExternalReturns1" => imported.extras.external_returns[0] = text_of(node),
         "ExternalReturns2" => imported.extras.external_returns[1] = text_of(node),
         other => return read_label(other, node, imported),
