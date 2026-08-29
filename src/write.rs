@@ -474,6 +474,7 @@ mod tests {
         imported.extras.edition = "Romanesco".to_owned();
         imported.extras.internal_fx2 = "C5".to_owned();
         imported.extras.options[1] = true;
+        imported.extras.options[6] = true;
         imported.extras.internal_fx_state[0] = "HALL,0.3500,0.7200,0.2000,0.8500".to_owned();
         imported.extras.armed_inputs[2] = true;
         imported.extras.external_returns[1] =
@@ -638,6 +639,7 @@ mod tests {
         assert_eq!(back.extras.edition, "Romanesco");
         assert_eq!(back.extras.internal_fx2, "C5");
         assert!(back.extras.options[1]);
+        assert!(back.extras.options[6], "the seventh option round trips");
         assert_eq!(
             back.extras.internal_fx_state[0],
             "HALL,0.3500,0.7200,0.2000,0.8500"

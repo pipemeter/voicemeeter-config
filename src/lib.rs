@@ -257,7 +257,7 @@ pub struct Extras {
     /// Which effect the second internal FX slot holds, `Delay` or `C5`.
     pub internal_fx2: String,
     /// The menu's checkable options, in the mixer's own order.
-    pub options: [bool; 6],
+    pub options: [bool; 7],
     /// Each internal FX slot's state: the preset name it is set to, empty
     /// for off, then its knob positions. Written as one string per slot so
     /// a slot that gains a knob later does not invalidate the file.
