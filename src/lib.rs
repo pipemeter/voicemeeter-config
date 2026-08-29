@@ -23,10 +23,10 @@ use std::fmt;
 pub mod blocks;
 pub mod macros;
 pub mod midi;
-pub mod pban;
 mod read;
 pub mod scene;
 mod settings;
+pub mod vban;
 mod write;
 
 use blocks::{C5, Compressor, Delay, DeviceOptions, EqCell, ExternalPatch, Gate, Pitch, Reverb};
@@ -41,7 +41,7 @@ use blocks::{C5, Compressor, Delay, DeviceOptions, EqCell, ExternalPatch, Gate, 
 pub enum Document {
     /// The mixer itself, in any of the three editions.
     Settings(Box<Imported>),
-    Pban(pban::Config),
+    Vban(vban::Config),
     Midi(midi::Map),
     MacroButtons(macros::Buttons),
     /// A recalled scene, which is a settings document wearing a preset name.
@@ -69,12 +69,12 @@ impl Document {
             // same path is the whole point of inheriting the format rather
             // than inventing one: a PipeMeeter file loads in Voicemeeter's
             // shape, and a Voicemeeter file loads here.
-            "VBAudioVoicemeeterSettings" | ROOT_PIPEMEETER => {
+            "VBAudioVoicemeeterSettings" | ROOT_PIPEMETER => {
                 let mut imported = settings::read_settings_from(&root, Some(&xml))?;
                 imported.dialect = Dialect::of(root.tag_name().name());
                 Self::Settings(Box::new(imported))
             }
-            "VBAudioVoicemeeterVBANConfig" => Self::Pban(pban::Config::read(&root)),
+            "VBAudioVoicemeeterVBANConfig" => Self::Vban(vban::Config::read(&root)),
             "VBAudioVoicemeeterMIDIMapping" => Self::Midi(midi::Map::read(&root)),
             "VBAudioVoicemeeterMacroButtonMap" => Self::MacroButtons(macros::Buttons::read(&root)),
             "VBAudioVoicemeeterPresetScene" => Self::Scene(Box::new(scene::Scene::read(&root)?)),
@@ -102,7 +102,7 @@ impl Document {
     pub fn kind(&self) -> &'static str {
         match self {
             Self::Settings(_) => "mixer settings",
-            Self::Pban(_) => "PBAN configuration",
+            Self::Vban(_) => "VBAN configuration",
             Self::Midi(_) => "MIDI mapping",
             Self::MacroButtons(_) => "MacroButtons",
             Self::Scene(_) => "scene",
@@ -122,7 +122,7 @@ impl Document {
 }
 
 /// The root element `PipeMeeter` writes.
-pub const ROOT_PIPEMEETER: &str = "PipemeeterSettings";
+pub const ROOT_PIPEMETER: &str = "PipemeterSettings";
 /// The root element Voicemeeter writes.
 pub const ROOT_VOICEMEETER: &str = "VBAudioVoicemeeterSettings";
 
@@ -142,7 +142,7 @@ pub enum Dialect {
 impl Dialect {
     #[must_use]
     fn of(root: &str) -> Self {
-        if root == ROOT_PIPEMEETER {
+        if root == ROOT_PIPEMETER {
             Self::PipeMeeter
         } else {
             Self::Voicemeeter
@@ -154,7 +154,7 @@ impl Dialect {
     pub fn root(self) -> &'static str {
         match self {
             Self::Voicemeeter => ROOT_VOICEMEETER,
-            Self::PipeMeeter => ROOT_PIPEMEETER,
+            Self::PipeMeeter => ROOT_PIPEMETER,
         }
     }
 }
@@ -566,7 +566,7 @@ pub fn parse(xml: &str) -> Result<Imported, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Dialect, Edition, Error, PANEL_COLOUR, ROOT_PIPEMEETER, ROOT_VOICEMEETER, parse};
+    use super::{Dialect, Edition, Error, PANEL_COLOUR, ROOT_PIPEMETER, ROOT_VOICEMEETER, parse};
 
     /// Trimmed from a real `VoicemeeterPotato` settings file: one hardware
     /// strip, one virtual strip, two buses, labels and devices. Includes the
@@ -738,27 +738,27 @@ mod tests {
 
     #[test]
     fn a_recognised_document_of_the_wrong_kind_says_so() {
-        let pban = "<VBAudioVoicemeeterVBANConfig><VBANConfiguration/>\
+        let vban = "<VBAudioVoicemeeterVBANConfig><VBANConfiguration/>\
                     </VBAudioVoicemeeterVBANConfig>";
-        // Asking for mixer settings and getting a PBAN file is a different
+        // Asking for mixer settings and getting a VBAN file is a different
         // mistake from handing over a photograph, and reads differently.
-        let err = parse(pban).unwrap_err();
+        let err = parse(vban).unwrap_err();
         assert!(matches!(err, Error::WrongDocument(_)));
         // The message names the kind in our own words, not the file's tag.
-        assert!(err.to_string().contains("PBAN"));
+        assert!(err.to_string().contains("VBAN"));
     }
 
     #[test]
     fn a_pipemeeter_file_is_read_as_the_same_format() {
         let ours = format!(
-            "<{ROOT_PIPEMEETER}><PipemeeterParameters>\
-             <Strip index='1' busa='1' dblevel='1.0' /></PipemeeterParameters></{ROOT_PIPEMEETER}>"
+            "<{ROOT_PIPEMETER}><PipemeterParameters>\
+             <Strip index='1' busa='1' dblevel='1.0' /></PipemeterParameters></{ROOT_PIPEMETER}>"
         );
         let parsed = parse(&ours).expect("our own dialect is the same format");
         assert_eq!(parsed.dialect, Dialect::PipeMeeter);
         assert!(parsed.strips[0].buses[0]);
 
-        let theirs = ours.replace(ROOT_PIPEMEETER, ROOT_VOICEMEETER);
+        let theirs = ours.replace(ROOT_PIPEMETER, ROOT_VOICEMEETER);
         assert_eq!(
             parse(&theirs).expect("and so is theirs").dialect,
             Dialect::Voicemeeter
@@ -767,7 +767,7 @@ mod tests {
 
     /// Every reference file we have, of every kind. The point is coverage
     /// of the *shapes* a real installation produces: three editions, scenes,
-    /// presets, PBAN, MIDI and `MacroButtons`, plus the odd hand-edited
+    /// presets, VBAN, MIDI and `MacroButtons`, plus the odd hand-edited
     /// fragment. Any that fails to parse is a gap in the reader.
     #[test]
     fn every_reference_document_is_recognised() {

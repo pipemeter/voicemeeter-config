@@ -39,9 +39,9 @@ impl Sections {
                 parameters: "VoiceMeeterParameters",
             },
             crate::Dialect::PipeMeeter => Self {
-                root: crate::ROOT_PIPEMEETER,
-                devices: "PipemeeterDeviceConfiguration",
-                parameters: "PipemeeterParameters",
+                root: crate::ROOT_PIPEMETER,
+                devices: "PipemeterDeviceConfiguration",
+                parameters: "PipemeterParameters",
             },
         }
     }
@@ -90,7 +90,7 @@ impl Document {
                 writer.write_event(Event::End(BytesEnd::new("VBAudioVoicemeeterPresetScene")))?;
                 Ok(())
             }
-            Self::Pban(config) => pban(writer, config),
+            Self::Vban(config) => vban(writer, config),
             // The remaining kinds are read-only: nothing in this program edits
             // a MIDI map or a button script, and a writer for something
             // nothing changes is a place for bugs to hide.
@@ -99,7 +99,7 @@ impl Document {
     }
 }
 
-/// The PBAN configuration, in the shape its own document has.
+/// The VBAN configuration, in the shape its own document has.
 ///
 /// Written because the network window edits it. The rest of the read-only
 /// kinds stay read-only for the reason given above; this one has stopped
@@ -109,7 +109,7 @@ impl Document {
 /// deliberately: they are not ours to choose. They are what is written in the
 /// file, and a document with different tags is a document Voicemeeter cannot
 /// read and we cannot read back.
-fn pban(writer: &mut Writer<Vec<u8>>, config: &crate::pban::Config) -> std::io::Result<()> {
+fn vban(writer: &mut Writer<Vec<u8>>, config: &crate::vban::Config) -> std::io::Result<()> {
     const ROOT: &str = "VBAudioVoicemeeterVBANConfig";
     writer.write_event(Event::Start(BytesStart::new(ROOT)))?;
 
@@ -642,8 +642,8 @@ mod tests {
         let mut ours = sample();
         ours.dialect = Dialect::PipeMeeter;
         let ours_text = Document::Settings(Box::new(ours)).render();
-        assert!(ours_text.contains("<PipemeeterSettings>"));
-        assert!(ours_text.contains("<PipemeeterParameters>"));
+        assert!(ours_text.contains("<PipemeterSettings>"));
+        assert!(ours_text.contains("<PipemeterParameters>"));
 
         let theirs_text = Document::Settings(Box::new(sample())).render();
         assert!(theirs_text.contains("<VBAudioVoicemeeterSettings>"));

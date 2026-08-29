@@ -1,4 +1,4 @@
-//! PBAN network configuration.
+//! VBAN network configuration.
 //!
 //! Its own document rather than part of the mixer settings, because the
 //! network setup outlives any one mix.
@@ -15,12 +15,12 @@
 
 use crate::read::{flag, flag_f32, index_of, mode_index};
 
-/// A whole PBAN configuration.
+/// A whole VBAN configuration.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Config {
     pub enabled: bool,
     pub username: String,
-    /// The colour the original tints the PBAN button with, as written.
+    /// The colour the original tints the VBAN button with, as written.
     pub colour: String,
     pub incoming: Vec<Stream>,
     pub outgoing: Vec<Stream>,
@@ -69,7 +69,7 @@ impl Stream {
             name: attr(node, "name"),
             address: attr(node, "ip"),
             // Ports above 65535 cannot be real, so a bad one reads as the
-            // PBAN default rather than as a wrapped number.
+            // VBAN default rather than as a wrapped number.
             port: u16::try_from(mode_index(flag_f32(node, "port"))).unwrap_or(6980),
             channel: mode_index(flag_f32(node, channel_attr)),
             quality: mode_index(flag_f32(node, "NQ")),
@@ -96,9 +96,9 @@ mod tests {
 </VBAudioVoicemeeterVBANConfig>";
 
     #[test]
-    fn a_pban_document_is_recognised_and_read() {
-        let Document::Pban(config) = Document::parse(SAMPLE).expect("parses") else {
-            panic!("should have been recognised as a PBAN configuration");
+    fn a_vban_document_is_recognised_and_read() {
+        let Document::Vban(config) = Document::parse(SAMPLE).expect("parses") else {
+            panic!("should have been recognised as a VBAN configuration");
         };
         assert!(config.enabled);
         assert_eq!(config.username, "blu");
@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn an_outgoing_stream_takes_its_channel_from_the_out_attribute() {
-        let Document::Pban(config) = Document::parse(SAMPLE).expect("parses") else {
+        let Document::Vban(config) = Document::parse(SAMPLE).expect("parses") else {
             panic!("wrong document kind");
         };
         assert_eq!(config.incoming[0].channel, 5);
@@ -159,9 +159,9 @@ mod round_trip {
         // The window edits this and nothing else writes it, so a lossy
         // writer would quietly drop the user's network setup on save.
         let before = sample();
-        let xml = Document::Pban(before.clone()).render();
-        let Document::Pban(after) = Document::parse(&xml).expect("parses") else {
-            panic!("a PBAN document did not read back as one");
+        let xml = Document::Vban(before.clone()).render();
+        let Document::Vban(after) = Document::parse(&xml).expect("parses") else {
+            panic!("a VBAN document did not read back as one");
         };
         assert_eq!(after, before);
     }
@@ -170,7 +170,7 @@ mod round_trip {
     fn the_two_directions_keep_their_own_channel_attribute() {
         // `in` and `out` are the only thing that differs between the tags,
         // and swapping them would silently move every stream.
-        let xml = Document::Pban(sample()).render();
+        let xml = Document::Vban(sample()).render();
         assert!(xml.contains("<VBANStreamIn"), "{xml}");
         assert!(xml.contains("<VBANStreamOut"), "{xml}");
         assert!(xml.contains("in=\"5\""), "{xml}");
@@ -179,9 +179,9 @@ mod round_trip {
 
     #[test]
     fn an_empty_configuration_still_makes_a_valid_document() {
-        let xml = Document::Pban(super::Config::default()).render();
-        let Document::Pban(after) = Document::parse(&xml).expect("parses") else {
-            panic!("not a PBAN document");
+        let xml = Document::Vban(super::Config::default()).render();
+        let Document::Vban(after) = Document::parse(&xml).expect("parses") else {
+            panic!("not a VBAN document");
         };
         assert_eq!(after, super::Config::default());
     }
