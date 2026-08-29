@@ -304,7 +304,7 @@ pub struct Strip {
     pub comp: f32,
     pub gate: f32,
     pub denoiser: f32,
-    /// DUMBPAN handle per face — colour, modulation, 3D position, in that
+    /// pan handle per face — colour, modulation, 3D position, in that
     /// order — each -1.0..=1.0 on both axes in the file.
     ///
     /// Three, not one: the faces control different things and each keeps its

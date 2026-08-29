@@ -177,7 +177,7 @@ fn read_strip(node: &roxmltree::Node<'_, '_>, strip: &mut Strip) {
     }
 }
 
-/// The DUMBPAN handle, which lives on whichever panel element carries it.
+/// The pan handle, which lives on whichever panel element carries it.
 ///
 /// Voicemeeter writes a separate `<Strip>` per panel mode, each with its own
 /// coordinate pair, so this is read from the element that has them rather
@@ -193,7 +193,7 @@ fn read_panel(node: &roxmltree::Node<'_, '_>, strip: &mut Strip) {
     }
 }
 
-/// The attribute pair each DUMBPAN face uses, in [`Strip::panels`] order.
+/// The attribute pair each pan face uses, in [`Strip::panels`] order.
 pub(crate) const PANEL_ATTRS: [(&str, &str); 3] = [
     ("ColorPanelx", "ColorPanely"),
     ("ModPanelx", "ModPanely"),

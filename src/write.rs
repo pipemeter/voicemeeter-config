@@ -293,7 +293,7 @@ fn strip_row(writer: &mut Writer<Vec<u8>>, i: usize, strip: &Strip) -> std::io::
     writer.write_event(Event::Empty(e))
 }
 
-/// The DUMBPAN coordinates, which live on a `<Strip>` of their own.
+/// The pan coordinates, which live on a `<Strip>` of their own.
 fn panel_row(writer: &mut Writer<Vec<u8>>, i: usize, strip: &Strip) -> std::io::Result<()> {
     let mut e = BytesStart::new("Strip");
     e.push_attribute(("index", (i + 1).to_string().as_str()));
