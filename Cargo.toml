@@ -5,7 +5,7 @@ edition = "2024"
 authors = ["PipeMeeter Team <dev@pipemeeter.org>"]
 description = "Reading and writing Voicemeeter's XML settings dialect"
 license = "Unlicense"
-repository = "https://github.com/pipemeeter/voicemeeter-config"
+repository = "https://github.com/pipemeter/voicemeeter-config"
 
 [lib]
 name = "voicemeeter_config"
