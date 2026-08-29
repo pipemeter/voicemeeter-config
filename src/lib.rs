@@ -122,6 +122,24 @@ pub const ROOT_PIPEMETER: &str = "PipemeterSettings";
 /// The root element Voicemeeter writes.
 pub const ROOT_VOICEMEETER: &str = "VBAudioVoicemeeterSettings";
 
+/// The section holding every device the mixer has ever seen.
+pub const SEEN_DEVICES: &str = "PipemeterSeenDevices";
+
+/// One remembered device: what an assignment stores, and what to show.
+///
+/// Deliberately three strings. Which of them are plugged in right now is
+/// something only the running graph can say, so a file cannot carry it and
+/// this does not pretend to.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SeenDevice {
+    /// The `PipeWire` node name.
+    pub name: String,
+    /// What a person is shown.
+    pub description: String,
+    /// `"in"` or `"out"`.
+    pub direction: String,
+}
+
 /// Whose settings file this is.
 ///
 /// The two are the same format: `PipeMeter`'s is Voicemeeter's with a
@@ -241,6 +259,9 @@ pub struct Imported {
     ///
     /// Without this a load followed by a save silently dropped every one.
     pub memories: Vec<String>,
+    /// Every device ever seen, so an assignment to one that is unplugged
+    /// survives a restart. See [`SEEN_DEVICES`].
+    pub seen_devices: Vec<SeenDevice>,
 }
 
 /// Settings that are `PipeMeter`'s alone.
@@ -431,7 +452,10 @@ pub fn parse(xml: &str) -> Result<Imported, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Dialect, Edition, Error, PANEL_COLOUR, ROOT_PIPEMETER, ROOT_VOICEMEETER, parse};
+    use super::{
+        Dialect, Document, Edition, Error, Imported, PANEL_COLOUR, ROOT_PIPEMETER,
+        ROOT_VOICEMEETER, Strip, parse,
+    };
 
     /// Trimmed from a real `VoicemeeterPotato` settings file: one hardware
     /// strip, one virtual strip, two buses, labels and devices. Includes the
@@ -596,6 +620,61 @@ mod tests {
         let err = parse(vban).unwrap_err();
         assert!(matches!(err, Error::WrongDocument(_)));
         assert!(err.to_string().contains("VBAN"));
+    }
+
+    /// Our own section, and the point of it: a device that is not plugged
+    /// in survives a save and a load.
+    #[test]
+    fn the_seen_device_list_round_trips() {
+        let mut settings = Imported {
+            dialect: Dialect::PipeMeter,
+            seen_devices: vec![crate::SeenDevice {
+                name: "bluez.headset".to_owned(),
+                description: "WH-1000XM4".to_owned(),
+                direction: "out".to_owned(),
+            }],
+            ..Imported::default()
+        };
+        settings.strips = vec![Strip::default()];
+
+        let text = Document::Settings(Box::new(settings)).render();
+        assert!(text.contains("<PipemeterSeenDevices>"), "{text}");
+
+        let back = Document::parse(&text)
+            .expect("parses")
+            .settings()
+            .cloned()
+            .expect("is a settings document");
+        assert_eq!(back.seen_devices.len(), 1);
+        assert_eq!(back.seen_devices[0].description, "WH-1000XM4");
+        assert_eq!(back.seen_devices[0].direction, "out");
+    }
+
+    /// The wrapper sections follow the dialect, right through the family:
+    /// a Voicemeeter installation reading our export should find the names
+    /// it expects, and ours should be spelled ours.
+    #[test]
+    fn wrapper_sections_follow_the_dialect() {
+        for (dialect, wanted) in [
+            (
+                Dialect::Voicemeeter,
+                ["VoiceMeeterDeviceConfiguration", "VoiceMeeterParameters"],
+            ),
+            (
+                Dialect::PipeMeter,
+                ["PipemeterDeviceConfiguration", "PipemeterParameters"],
+            ),
+        ] {
+            let settings = Imported {
+                dialect,
+                strips: vec![Strip::default()],
+                ..Imported::default()
+            };
+            let text = Document::Settings(Box::new(settings)).render();
+            for name in wanted {
+                assert!(text.contains(&format!("<{name}>")), "{name} missing:\n{text}");
+            }
+        }
     }
 
     #[test]

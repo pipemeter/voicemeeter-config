@@ -72,6 +72,13 @@ pub(crate) fn read_settings_from(
 /// than nested three deep inside the walk.
 fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -> bool {
     match tag {
+        "SeenDevice" => {
+            imported.seen_devices.push(crate::SeenDevice {
+                name: node.attribute("name").unwrap_or_default().to_owned(),
+                description: node.attribute("description").unwrap_or_default().to_owned(),
+                direction: node.attribute("direction").unwrap_or("out").to_owned(),
+            });
+        }
         "Strip" if node.has_attribute("cell") => {
             imported.strip_eq.push(EqCell::read(node));
         }

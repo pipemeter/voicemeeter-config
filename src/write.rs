@@ -26,8 +26,7 @@ use crate::{BUS_EQ, BUS_MONO, BUS_MUTE, BUS_SEL};
 /// what makes ours an extension of theirs rather than a format of its own.
 struct Sections {
     root: &'static str,
-    devices: &'static str,
-    parameters: &'static str,
+    prefix: &'static str,
 }
 
 impl Sections {
@@ -35,15 +34,20 @@ impl Sections {
         match dialect {
             crate::Dialect::Voicemeeter => Self {
                 root: crate::ROOT_VOICEMEETER,
-                devices: "VoiceMeeterDeviceConfiguration",
-                parameters: "VoiceMeeterParameters",
+                prefix: "VoiceMeeter",
             },
             crate::Dialect::PipeMeter => Self {
                 root: crate::ROOT_PIPEMETER,
-                devices: "PipemeterDeviceConfiguration",
-                parameters: "PipemeterParameters",
+                prefix: "Pipemeter",
             },
         }
+    }
+
+    /// A wrapper section's name in this dialect. Voicemeeter names every
+    /// one of them `VoiceMeeter` + a suffix, so the dialect is a prefix
+    /// rather than a table: a section added later is covered already.
+    fn named(&self, suffix: &str) -> String {
+        format!("{}{suffix}", self.prefix)
     }
 }
 
@@ -148,16 +152,16 @@ fn body(
     imported: &Imported,
     sections: &Sections,
 ) -> std::io::Result<()> {
-    writer.write_event(Event::Start(BytesStart::new(sections.devices)))?;
+    writer.write_event(Event::Start(BytesStart::new(sections.named("DeviceConfiguration"))))?;
     for (i, name) in imported.input_devices.iter().enumerate() {
         device(writer, "InputDev", i, name.as_deref())?;
     }
     for (i, name) in imported.output_devices.iter().enumerate() {
         device(writer, "OutputDev", i, name.as_deref())?;
     }
-    writer.write_event(Event::End(BytesEnd::new(sections.devices)))?;
+    writer.write_event(Event::End(BytesEnd::new(sections.named("DeviceConfiguration"))))?;
 
-    writer.write_event(Event::Start(BytesStart::new(sections.parameters)))?;
+    writer.write_event(Event::Start(BytesStart::new(sections.named("Parameters"))))?;
     extras(writer, imported)?;
     labels(writer, imported)?;
     for (i, strip) in imported.strips.iter().enumerate() {
@@ -168,11 +172,38 @@ fn body(
         bus_row(writer, i, bus)?;
     }
     blocks(writer, imported)?;
-    writer.write_event(Event::End(BytesEnd::new(sections.parameters)))?;
+    writer.write_event(Event::End(BytesEnd::new(sections.named("Parameters"))))?;
 
-    eq_section(writer, "VoiceMeeterStripEQ", "Strip", &imported.strip_eq)?;
-    eq_section(writer, "VoiceMeeterBUSEQ", "Bus", &imported.bus_eq)?;
+    seen_devices(writer, imported)?;
+    eq_section(writer, &sections.named("StripEQ"), "Strip", &imported.strip_eq)?;
+    eq_section(writer, &sections.named("BUSEQ"), "Bus", &imported.bus_eq)?;
     memories(writer, imported)
+}
+
+/// Every device the mixer has ever seen.
+///
+/// Ours, not Voicemeeter's - Windows keeps its device history in the
+/// registry, so there is no original key to follow. It goes in this file
+/// all the same rather than a list of its own: two settings files is one
+/// more than anybody asked for, and a device history that can drift out of
+/// step with the assignments referring to it is worse than no history.
+///
+/// The name is fixed in both dialects. A Voicemeeter installation never
+/// writes it, so there is no `VoiceMeeter` spelling for it to collide with.
+fn seen_devices(writer: &mut Writer<Vec<u8>>, imported: &Imported) -> std::io::Result<()> {
+    if imported.seen_devices.is_empty() {
+        return Ok(());
+    }
+    writer.write_event(Event::Start(BytesStart::new(crate::SEEN_DEVICES)))?;
+    for device in &imported.seen_devices {
+        let mut element = BytesStart::new("SeenDevice");
+        element.push_attribute(("direction", device.direction.as_str()));
+        element.push_attribute(("name", device.name.as_str()));
+        element.push_attribute(("description", device.description.as_str()));
+        writer.write_event(Event::Empty(element))?;
+    }
+    writer.write_event(Event::End(BytesEnd::new(crate::SEEN_DEVICES)))?;
+    Ok(())
 }
 
 /// The A/B compare memories, put back exactly as they arrived.
