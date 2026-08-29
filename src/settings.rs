@@ -152,6 +152,8 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
         "InternalFxState2" => imported.extras.internal_fx_state[1] = text_of(node),
         "MenuOptions" => read_options(node, &mut imported.extras.options),
         "ArmedInputs" => read_options(node, &mut imported.extras.armed_inputs),
+        "ExternalReturns1" => imported.extras.external_returns[0] = text_of(node),
+        "ExternalReturns2" => imported.extras.external_returns[1] = text_of(node),
         // A label is the only arm that may not match anything, so it is the
         // one that decides whether this element counted.
         other => return read_label(other, node, imported),

@@ -269,6 +269,9 @@ pub struct Extras {
     pub internal_fx_state: [String; 2],
     /// Which pre-fader inputs the recorder page has armed, in strip order.
     pub armed_inputs: [bool; 8],
+    /// The External FX Return grid: two rows of eight, one per bus, held
+    /// as text so a row that gains a bus later does not invalidate a file.
+    pub external_returns: [String; 2],
 }
 
 /// One strip's transferable settings.

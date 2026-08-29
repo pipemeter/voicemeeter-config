@@ -218,6 +218,11 @@ fn extras(writer: &mut Writer<Vec<u8>>, imported: &Imported) -> std::io::Result<
             text_element(writer, &format!("InternalFxState{}", slot + 1), state)?;
         }
     }
+    for (row, values) in extras.external_returns.iter().enumerate() {
+        if !values.is_empty() {
+            text_element(writer, &format!("ExternalReturns{}", row + 1), values)?;
+        }
+    }
     if extras.armed_inputs.iter().any(|set| *set) {
         let flags: Vec<&str> = extras
             .armed_inputs
@@ -492,6 +497,8 @@ mod tests {
         imported.extras.options[1] = true;
         imported.extras.internal_fx_state[0] = "HALL,0.3500,0.7200,0.2000,0.8500".to_owned();
         imported.extras.armed_inputs[2] = true;
+        imported.extras.external_returns[1] =
+            "0.0000,0.7500,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000".to_owned();
         imported.extras.armed_inputs[7] = true;
         imported
     }
@@ -664,6 +671,10 @@ mod tests {
         );
         // The arming set is eight flags, and which eight matters: a row
         // that came back shifted would arm the wrong strips.
+        assert_eq!(
+            back.extras.external_returns[1],
+            "0.0000,0.7500,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000"
+        );
         assert_eq!(
             back.extras.armed_inputs,
             [false, false, true, false, false, false, false, true]
