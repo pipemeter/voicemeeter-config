@@ -261,6 +261,9 @@ pub struct Extras {
     /// The settings file last opened by hand, reopened at startup when the
     /// menu says so. Empty means the ordinary session.
     pub startup_settings: String,
+    /// Where the recorder writes its takes. Empty means the default beside
+    /// the settings.
+    pub recording_dir: String,
     /// Each internal FX slot's state: the preset name it is set to, empty
     /// for off, then its knob positions. Written as one string per slot so
     /// a slot that gains a knob later does not invalidate the file.

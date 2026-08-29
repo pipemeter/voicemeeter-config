@@ -216,6 +216,9 @@ fn extras(writer: &mut Writer<Vec<u8>>, imported: &Imported) -> std::io::Result<
             text_element(writer, &format!("ExternalReturns{}", row + 1), values)?;
         }
     }
+    if !extras.recording_dir.is_empty() {
+        text_element(writer, "RecordingDir", &extras.recording_dir)?;
+    }
     if !extras.startup_settings.is_empty() {
         text_element(writer, "StartupSettings", &extras.startup_settings)?;
     }
