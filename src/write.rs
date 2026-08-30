@@ -152,14 +152,18 @@ fn body(
     imported: &Imported,
     sections: &Sections,
 ) -> std::io::Result<()> {
-    writer.write_event(Event::Start(BytesStart::new(sections.named("DeviceConfiguration"))))?;
+    writer.write_event(Event::Start(BytesStart::new(
+        sections.named("DeviceConfiguration"),
+    )))?;
     for (i, name) in imported.input_devices.iter().enumerate() {
         device(writer, "InputDev", i, name.as_deref())?;
     }
     for (i, name) in imported.output_devices.iter().enumerate() {
         device(writer, "OutputDev", i, name.as_deref())?;
     }
-    writer.write_event(Event::End(BytesEnd::new(sections.named("DeviceConfiguration"))))?;
+    writer.write_event(Event::End(BytesEnd::new(
+        sections.named("DeviceConfiguration"),
+    )))?;
 
     writer.write_event(Event::Start(BytesStart::new(sections.named("Parameters"))))?;
     extras(writer, imported)?;
@@ -175,7 +179,12 @@ fn body(
     writer.write_event(Event::End(BytesEnd::new(sections.named("Parameters"))))?;
 
     seen_devices(writer, imported)?;
-    eq_section(writer, &sections.named("StripEQ"), "Strip", &imported.strip_eq)?;
+    eq_section(
+        writer,
+        &sections.named("StripEQ"),
+        "Strip",
+        &imported.strip_eq,
+    )?;
     eq_section(writer, &sections.named("BUSEQ"), "Bus", &imported.bus_eq)?;
     memories(writer, imported)
 }

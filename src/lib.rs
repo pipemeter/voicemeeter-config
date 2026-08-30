@@ -684,7 +684,10 @@ mod tests {
             };
             let text = Document::Settings(Box::new(settings)).render();
             for name in wanted {
-                assert!(text.contains(&format!("<{name}>")), "{name} missing:\n{text}");
+                assert!(
+                    text.contains(&format!("<{name}>")),
+                    "{name} missing:\n{text}"
+                );
             }
         }
     }
