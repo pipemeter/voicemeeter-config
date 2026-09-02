@@ -274,6 +274,14 @@ fn extras(writer: &mut Writer<Vec<u8>>, imported: &Imported) -> std::io::Result<
             .collect();
         text_element(writer, "ArmedInputs", &flags.join(","))?;
     }
+    if extras.deck_buses.iter().any(|set| *set) {
+        let flags: Vec<&str> = extras
+            .deck_buses
+            .iter()
+            .map(|set| if *set { "1" } else { "0" })
+            .collect();
+        text_element(writer, "DeckBuses", &flags.join(","))?;
+    }
     if extras.options.iter().any(|set| *set) {
         let flags: Vec<&str> = extras
             .options
