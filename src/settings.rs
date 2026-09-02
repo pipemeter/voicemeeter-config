@@ -97,6 +97,11 @@ fn element(node: &roxmltree::Node<'_, '_>, tag: &str, imported: &mut Imported) -
                 read_strip(node, slot);
             }
         }
+        "K7BUSRoute" => {
+            for (attr, slot) in BUS_ATTRS.into_iter().zip(&mut imported.extras.deck_buses) {
+                *slot = flag(node, attr);
+            }
+        }
         "Bus" if node.has_attribute("BusMode") => {
             if let Some(slot) = index_of(node).and_then(|i| imported.buses.get_mut(i)) {
                 read_bus(node, slot);

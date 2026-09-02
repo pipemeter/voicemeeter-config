@@ -175,6 +175,7 @@ fn body(
     for (i, bus) in imported.buses.iter().enumerate() {
         bus_row(writer, i, bus)?;
     }
+    k7_bus_route(writer, imported.extras.deck_buses)?;
     blocks(writer, imported)?;
     writer.write_event(Event::End(BytesEnd::new(sections.named("Parameters"))))?;
 
@@ -381,6 +382,15 @@ fn bus_row(writer: &mut Writer<Vec<u8>>, i: usize, bus: &Bus) -> std::io::Result
         e.push_attribute((attr, f(value).as_str()));
     }
     e.push_attribute(("dblevel", f(bus.gain_db).as_str()));
+    writer.write_event(Event::Empty(e))
+}
+
+fn k7_bus_route(writer: &mut Writer<Vec<u8>>, deck_buses: [bool; 8]) -> std::io::Result<()> {
+    let mut e = BytesStart::new("K7BUSRoute");
+    for (attr, on) in BUS_ATTRS.into_iter().zip(deck_buses) {
+        e.push_attribute((attr, bit(on)));
+    }
+    e.push_attribute(("dblevel", "0.00"));
     writer.write_event(Event::Empty(e))
 }
 
